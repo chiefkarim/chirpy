@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"sync/atomic"
 )
 
@@ -62,8 +63,15 @@ func main() {
 			response.Write(message)
 			return
 		}
+		reg, err := regexp.Compile("(?i)kerfuffle|sharbert|fornax")
+		if err != nil {
+			log.Printf("Error Marshaling response error message %v", err)
+			response.WriteHeader(500)
+			return
+		}
+		cleaned := reg.ReplaceAll([]byte(chirp.Body), []byte("****"))
 
-		message, err := json.Marshal(map[string]bool{"valid": true})
+		message, err := json.Marshal(map[string]string{"cleaned_body": string(cleaned)})
 		if err != nil {
 			log.Printf("Error Marshaling response error message %v", err)
 			response.WriteHeader(500)
