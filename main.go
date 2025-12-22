@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,16 +25,62 @@ func main() {
 	config := apiConfig{}
 
 	serverMux.Handle("/app/", config.middlewareMetricInc(logger(http.StripPrefix("/app/", http.FileServer(http.Dir("./http"))))))
-	serverMux.HandleFunc("/healthz", func(response http.ResponseWriter, req *http.Request) {
+	serverMux.HandleFunc("GET /api/healthz", func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		response.WriteHeader(200)
 		response.Write([]byte("OK"))
 	})
-	serverMux.HandleFunc("/metrics", func(response http.ResponseWriter, request *http.Request) {
+	serverMux.HandleFunc("POST /api/validate_chirp", func(response http.ResponseWriter, request *http.Request) {
+		type Chirp struct {
+			Body string
+		}
+
+		decoder := json.NewDecoder(request.Body)
+		var chirp Chirp
+		err := decoder.Decode(&chirp)
+		if err != nil {
+			log.Printf("Error decoding request body %v", err)
+			message, err := json.Marshal(map[string]string{"error": "Something went wrong"})
+			if err != nil {
+				log.Printf("Error Marshaling response error message %v", err)
+				response.WriteHeader(500)
+				return
+			}
+			response.WriteHeader(400)
+			response.Write(message)
+			return
+		}
+
+		if len(chirp.Body) > 140 {
+			message, err := json.Marshal(map[string]string{"error": "Chirp is too long"})
+			if err != nil {
+				log.Printf("Error Marshaling response error message %v", err)
+				response.WriteHeader(500)
+				return
+			}
+			response.WriteHeader(400)
+			response.Write(message)
+			return
+		}
+
+		message, err := json.Marshal(map[string]bool{"valid": true})
+		if err != nil {
+			log.Printf("Error Marshaling response error message %v", err)
+			response.WriteHeader(500)
+			return
+		}
 		response.WriteHeader(200)
-		fmt.Fprintf(response, "Hits: %d", config.fileServerHits.Load())
+		response.Write(message)
 	})
-	serverMux.HandleFunc("/reset", func(response http.ResponseWriter, request *http.Request) {
+	serverMux.HandleFunc("GET /admin/metrics", func(response http.ResponseWriter, request *http.Request) {
+		response.WriteHeader(200)
+		response.Header().Add("Content-Type", "text/html")
+		fmt.Fprintf(response, `<html><body><h1>Welcome, Chirpy Admin</h1>
+    <p>Chirpy has been visited %d times!</p>
+  </body>
+</html>`, config.fileServerHits.Load())
+	})
+	serverMux.HandleFunc("POST /admin/reset", func(response http.ResponseWriter, request *http.Request) {
 		config.fileServerHits.Store(0)
 		response.WriteHeader(200)
 	})
