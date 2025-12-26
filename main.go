@@ -1,12 +1,18 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"sync/atomic"
+
+	"github.com/chiefkarim/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
@@ -21,6 +27,18 @@ func (config *apiConfig) middlewareMetricInc(next http.Handler) http.Handler {
 }
 
 func main() {
+	godotenv.Load()
+	db_url := os.Getenv("DB_URL")
+	if db_url == "" {
+		log.Fatal("DB_URL environment variable not found!")
+	}
+
+	db, err := sql.Open("postgres", db_url)
+	if err != nil {
+		log.Fatalf("Somthing went wrong connecting to Databse %s: \n%v", db_url, err)
+	}
+	dbQueries := database.New(db)
+	fmt.Print(dbQueries)
 	serverMux := http.NewServeMux()
 	server := &http.Server{Addr: ":8080", Handler: serverMux}
 	config := apiConfig{}
