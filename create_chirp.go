@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Chrip struct {
+type Chirp struct {
 	Id        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -76,7 +76,7 @@ func (config *apiConfig) createChirp(response http.ResponseWriter, request *http
 	}
 
 	createdChirp, err := config.dbQueries.CreateChirp(request.Context(), database.CreateChirpParams{Body: string(cleaned), UserID: userid})
-	chripResponse, err := json.Marshal(Chrip{
+	chripResponse, err := json.Marshal(Chirp{
 		Id:        createdChirp.ID,
 		CreatedAt: createdChirp.CreatedAt.Time,
 		UpdatedAt: createdChirp.UpdatedAt.Time,

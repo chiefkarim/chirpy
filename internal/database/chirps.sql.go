@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -33,4 +34,52 @@ func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp
 		&i.UserID,
 	)
 	return i, err
+}
+
+const getAllChirps = `-- name: GetAllChirps :many
+SELECT
+    id,
+    body,
+    created_at,
+    updated_at,
+    user_id
+FROM chirps
+ORDER BY created_at
+`
+
+type GetAllChirpsRow struct {
+	ID        uuid.UUID
+	Body      string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+	UserID    uuid.UUID
+}
+
+func (q *Queries) GetAllChirps(ctx context.Context) ([]GetAllChirpsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllChirps)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllChirpsRow
+	for rows.Next() {
+		var i GetAllChirpsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Body,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -50,6 +50,7 @@ func main() {
 	serverMux.HandleFunc("POST /api/users", config.createUser)
 	serverMux.HandleFunc("GET /api/healthz", config.healthz)
 	serverMux.HandleFunc("POST /api/chirps", config.createChirp)
+	serverMux.HandleFunc("GET /api/chirps", config.getAllChirps)
 
 	serverMux.HandleFunc("GET /admin/metrics", config.metric)
 	serverMux.HandleFunc("POST /admin/reset", config.reset)
