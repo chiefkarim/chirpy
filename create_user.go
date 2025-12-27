@@ -6,10 +6,19 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type User struct {
 	Email string `json:"email"`
+}
+type UserDetails struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func (config *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
@@ -24,15 +33,7 @@ func (config *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("error unmarshaling body for createUser %v\n", err)
 		w.WriteHeader(401)
-		fmt.Fprint(w,
-			`
-		{
-			"error":"wrong body format",
-			"expected":{
-				email:"example@example.com"
-			}
-		}
-		 `)
+		fmt.Fprint(w, "Expected a valid JSON\n")
 		return
 	}
 
@@ -51,13 +52,12 @@ func (config *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type UserDetails struct {
-		Id          string `json:"id"`
-		Created_at  string `json:"created_at"`
-		Updateed_at string `json:"updated_at"`
-		Email       string `json:"email"`
-	}
-	returendUser, err := json.Marshal(UserDetails{Id: createdUser.ID.String(), Created_at: createdUser.CreatedAt.Time.String(), Updateed_at: createdUser.UpdatedAt.Time.String(), Email: createdUser.Email})
+	returendUser, err := json.Marshal(UserDetails{
+		ID:        createdUser.ID,
+		CreatedAt: createdUser.CreatedAt.Time,
+		UpdatedAt: createdUser.UpdatedAt.Time,
+		Email:     createdUser.Email,
+	})
 	if err != nil {
 		log.Printf("error unmarshaling body for createUser %v\n", err)
 		w.WriteHeader(500)
