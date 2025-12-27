@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"sync/atomic"
 
 	"github.com/chiefkarim/chirpy/internal/database"
@@ -17,6 +18,7 @@ import (
 
 type apiConfig struct {
 	fileServerHits atomic.Int32
+	dbQueries      *database.Queries
 }
 
 func (config *apiConfig) middlewareMetricInc(next http.Handler) http.Handler {
@@ -38,12 +40,16 @@ func main() {
 		log.Fatalf("Somthing went wrong connecting to Databse %s: \n%v", db_url, err)
 	}
 	dbQueries := database.New(db)
-	fmt.Print(dbQueries)
+	config := apiConfig{dbQueries: dbQueries}
+
 	serverMux := http.NewServeMux()
 	server := &http.Server{Addr: ":8080", Handler: serverMux}
-	config := apiConfig{}
+	fmt.Printf("server listening on: http://localhost:%s/app/\n", strings.ReplaceAll(server.Addr, ":", ""))
 
-	serverMux.Handle("/app/", config.middlewareMetricInc(logger(http.StripPrefix("/app/", http.FileServer(http.Dir("./http"))))))
+	fileSystemHandler := config.middlewareMetricInc(logger(http.StripPrefix("/app/", http.FileServer(http.Dir("./http")))))
+	serverMux.Handle("/app/", fileSystemHandler)
+
+	serverMux.HandleFunc("POST /api/users", config.createUser)
 	serverMux.HandleFunc("GET /api/healthz", func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		response.WriteHeader(200)
