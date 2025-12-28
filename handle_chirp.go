@@ -14,37 +14,19 @@ func (config *apiConfig) getChirp(response http.ResponseWriter, request *http.Re
 	chirpID := request.PathValue("chirpID")
 	parsedChirpId, err := uuid.Parse(chirpID)
 	if chirpID == "" || err != nil {
-		message, err := json.Marshal(map[string]string{"error": "must provide valid chirpID in the url!"})
-		if err != nil {
-			log.Printf("500: error while marshaling error message,%v\n", err)
-			response.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		response.WriteHeader(http.StatusBadRequest)
-		response.Write(message)
+		respondWithJSON(response, http.StatusBadRequest, map[string]string{"error": "must provide valid chirpID in the url!"})
 		return
 	}
+
 	chirp, err := config.dbQueries.GetChirp(request.Context(), parsedChirpId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			message, err := json.Marshal(map[string]string{"error": "No shirp was found with the given id!"})
-			if err != nil {
-				log.Printf("500: error while marshaling error message,%v\n", err)
-				response.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			response.WriteHeader(http.StatusNotFound)
-			response.Write(message)
+			respondWithJSON(response, http.StatusNotFound, map[string]string{"error": "No shirp was found with the given id!"})
 			return
 		}
-		message, err := json.Marshal(map[string]string{"error": "Couldn't get chirps for the provided user id!"})
-		if err != nil {
-			log.Printf("500: error while marshaling error message,%v\n", err)
-			response.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		response.WriteHeader(http.StatusInternalServerError)
-		response.Write(message)
+		message := map[string]string{"error": "Somthing went wrong!"}
+		log.Printf("500: Error,%v\n", err)
+		respondWithJSON(response, http.StatusInternalServerError, message)
 		return
 	}
 
@@ -56,8 +38,9 @@ func (config *apiConfig) getChirp(response http.ResponseWriter, request *http.Re
 		Body:      chirp.Body,
 	})
 	if err != nil {
-		log.Printf("Error Marshaling response error message %v", err)
-		response.WriteHeader(http.StatusInternalServerError)
+		message := map[string]string{"error": "Somthing went wrong!"}
+		log.Printf("500: Error Marshaling response error message %v", err)
+		respondWithJSON(response, http.StatusInternalServerError, message)
 		return
 	}
 	response.WriteHeader(http.StatusOK)
