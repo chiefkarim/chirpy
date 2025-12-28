@@ -7,7 +7,6 @@ import (
 )
 
 func (config *apiConfig) getAllChirps(response http.ResponseWriter, request *http.Request) {
-	// getAllChirps
 	rows, err := config.dbQueries.GetAllChirps(request.Context())
 	if err != nil {
 		message, err := json.Marshal(map[string]string{"error": "error getting all chirps."})
