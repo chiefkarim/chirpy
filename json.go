@@ -17,3 +17,8 @@ func respondWithJSON(response http.ResponseWriter, status int, payload any) {
 	response.WriteHeader(status)
 	response.Write(data)
 }
+
+func JSONResponse5OO(w http.ResponseWriter) {
+	message := map[string]string{"error": "internal server error"}
+	respondWithJSON(w, http.StatusInternalServerError, message)
+}

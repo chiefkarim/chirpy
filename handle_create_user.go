@@ -2,18 +2,21 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/chiefkarim/chirpy/internal/auth"
+	"github.com/chiefkarim/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
 type User struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Paswword string `json:"password"`
 }
+
 type UserDetails struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
@@ -25,45 +28,42 @@ func (config *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	var user User
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("error reading body for createUser %v\n", err)
-		w.WriteHeader(401)
+		log.Printf("500:Error reading body for createUser %v\n", err)
+		JSONResponse5OO(w)
 		return
 	}
+
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		log.Printf("error unmarshaling body for createUser %v\n", err)
-		w.WriteHeader(401)
-		fmt.Fprint(w, "Expected a valid JSON\n")
+		log.Printf("500:Error unmarshaling body for createUser %v\n", err)
+		JSONResponse5OO(w)
 		return
 	}
 
-	if user.Email == "" {
-		log.Println("Error: request doesn't have email field!")
-		w.WriteHeader(401)
-		fmt.Fprint(w,
-			"{'error':'must provide email'}\n")
+	if user.Email == "" || user.Paswword == "" {
+		log.Println("401:Error request doesn't have email or password fields!")
+		message := map[string]string{"error": "must provide email and password"}
+		respondWithJSON(w, http.StatusBadRequest, message)
 		return
 	}
 
-	createdUser, err := config.dbQueries.CreateUser(r.Context(), user.Email)
+	hashedPassword, err := auth.HashPassword(user.Paswword)
 	if err != nil {
-		w.WriteHeader(500)
+		log.Printf("500:Error hashing password %v\n", err)
+		JSONResponse5OO(w)
+	}
+
+	createdUser, err := config.dbQueries.CreateUser(r.Context(), database.CreateUserParams{Email: user.Email, HashedPassword: hashedPassword})
+	if err != nil {
 		log.Printf("Error creating user with email %s\n%v", user.Email, err)
+		JSONResponse5OO(w)
 		return
 	}
 
-	returendUser, err := json.Marshal(UserDetails{
+	respondWithJSON(w, http.StatusCreated, UserDetails{
 		ID:        createdUser.ID,
 		CreatedAt: createdUser.CreatedAt.Time,
 		UpdatedAt: createdUser.UpdatedAt.Time,
 		Email:     createdUser.Email,
 	})
-	if err != nil {
-		log.Printf("error unmarshaling body for createUser %v\n", err)
-		w.WriteHeader(500)
-	}
-
-	w.WriteHeader(201)
-	w.Header().Add("Content-type", "application/json")
-	fmt.Fprint(w, string(returendUser))
 }
