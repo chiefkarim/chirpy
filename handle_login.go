@@ -66,10 +66,12 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	token, err := auth.MakeJWT(dbUser.ID, config.hashKey, 1*time.Hour)
 	if err != nil {
 		JSONResponse5OO(w)
+		return
 	}
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
 		JSONResponse5OO(w)
+		return
 	}
 	_, err = config.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,
@@ -78,6 +80,7 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		JSONResponse5OO(w)
+		return
 	}
 	respondWithJSON(w, http.StatusOK, LoginUserDetails{
 		ID:           dbUser.ID,
