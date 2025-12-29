@@ -61,6 +61,7 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusUnauthorized, message)
 		return
 	}
+
 	token, err := auth.MakeJWT(dbUser.ID, config.hashKey, user.ExpiresIn)
 	if err != nil {
 		JSONResponse5OO(w)

@@ -17,6 +17,7 @@ import (
 type apiConfig struct {
 	fileServerHits atomic.Int32
 	dbQueries      *database.Queries
+	hashKey        string
 }
 
 func (config *apiConfig) middlewareMetricInc(next http.Handler) http.Handler {
@@ -38,7 +39,9 @@ func main() {
 		log.Fatalf("Somthing went wrong connecting to Databse %s: \n%v", db_url, err)
 	}
 	dbQueries := database.New(db)
-	config := apiConfig{dbQueries: dbQueries}
+
+	hash_key := os.Getenv("HASH_KEY")
+	config := apiConfig{dbQueries: dbQueries, hashKey: hash_key}
 
 	serverMux := http.NewServeMux()
 	server := &http.Server{Addr: ":8080", Handler: serverMux}

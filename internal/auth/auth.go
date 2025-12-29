@@ -24,10 +24,14 @@ func CheckPasswordHash(password, hash string) (bool, error) {
 }
 
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+	expiration := expiresIn
+	if expiresIn == 0 {
+		expiration = 1 * time.Hour
+	}
 	claims := &jwt.RegisteredClaims{
 		Issuer:    "chirpy",
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiration)),
 		Subject:   userID.String(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -42,8 +46,6 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	if err != nil {
 		log.Printf("error parsing jwt token %v", err)
 	} else if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
-		issuer := claims.Issuer
-		fmt.Printf("issuer %s, expiresat %s, issuedat %s, subject %s", issuer, claims.ExpiresAt, claims.IssuedAt, claims.Subject)
 		if userid, ok := uuid.Parse(claims.Subject); ok == nil {
 			return userid, nil
 		} else {

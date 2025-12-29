@@ -7,9 +7,14 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/chiefkarim/chirpy/internal/auth"
 	"github.com/chiefkarim/chirpy/internal/database"
 	"github.com/google/uuid"
 )
+
+type parameters struct {
+	Body string `json:"body"`
+}
 
 type Chirp struct {
 	Id        uuid.UUID `json:"id"`
@@ -20,14 +25,21 @@ type Chirp struct {
 }
 
 func (config *apiConfig) createChirp(response http.ResponseWriter, request *http.Request) {
-	type parameters struct {
-		Body    string `json:"body"`
-		User_id string `json:"user_id"`
+	token, err := auth.GetBearerToken(request.Header)
+	if err != nil {
+		JSONResponse5OO(response)
+		return
+	}
+	tokenUserId, err := auth.ValidateJWT(token, config.hashKey)
+	if err != nil {
+		log.Print(err)
+		respondWithJSON(response, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+		return
 	}
 
 	decoder := json.NewDecoder(request.Body)
 	var chirp parameters
-	err := decoder.Decode(&chirp)
+	err = decoder.Decode(&chirp)
 	if err != nil {
 		log.Printf("Error decoding request body %v", err)
 		message, err := json.Marshal(map[string]string{"error": "Something went wrong"})
@@ -62,20 +74,7 @@ func (config *apiConfig) createChirp(response http.ResponseWriter, request *http
 
 	cleaned := reg.ReplaceAll([]byte(chirp.Body), []byte("****"))
 
-	userid, err := uuid.Parse(chirp.User_id)
-	if err != nil {
-		message, err := json.Marshal(map[string]string{"error": "please enter a valide user id"})
-		if err != nil {
-			log.Printf("Error Marshaling response error message %v", err)
-			response.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		response.WriteHeader(http.StatusBadRequest)
-		response.Write(message)
-		return
-	}
-
-	createdChirp, err := config.dbQueries.CreateChirp(request.Context(), database.CreateChirpParams{Body: string(cleaned), UserID: userid})
+	createdChirp, err := config.dbQueries.CreateChirp(request.Context(), database.CreateChirpParams{Body: string(cleaned), UserID: tokenUserId})
 	chripResponse, err := json.Marshal(Chirp{
 		Id:        createdChirp.ID,
 		CreatedAt: createdChirp.CreatedAt.Time,
