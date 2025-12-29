@@ -13,3 +13,9 @@ SELECT
     revoked_at
 FROM refresh_tokens
 WHERE token = $1;
+
+-- name: ExpireToken :one
+UPDATE refresh_tokens
+SET revoked_at =$1
+WHERE token = $2
+RETURNING *;

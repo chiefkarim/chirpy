@@ -69,6 +69,7 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	refreshToken, err := auth.MakeRefreshToken()
+	log.Printf("refresh token, %s", refreshToken)
 	if err != nil {
 		JSONResponse5OO(w)
 		return

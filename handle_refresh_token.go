@@ -11,8 +11,8 @@ import (
 func (config *apiConfig) RefreshToken(response http.ResponseWriter, request *http.Request) {
 	refreshToken, err := auth.GetBearerToken(request.Header)
 	if err != nil {
-		log.Printf("500:Error reading body for createUser %v\n", err)
-		JSONResponse5OO(response)
+		log.Print(err)
+		respondWithJSON(response, http.StatusUnauthorized, map[string]string{"error": "Plase provide valid accesstoken header"})
 		return
 	}
 
@@ -23,7 +23,7 @@ func (config *apiConfig) RefreshToken(response http.ResponseWriter, request *htt
 		return
 	}
 
-	if DBRefreshToken.ExpiresAt.Before(time.Now().UTC()) || DBRefreshToken.RevokedAt.Time.Before(time.Now().UTC()) {
+	if DBRefreshToken.ExpiresAt.Before(time.Now().UTC()) || (DBRefreshToken.RevokedAt.Valid && DBRefreshToken.RevokedAt.Time.Before(time.Now().UTC())) {
 		respondWithJSON(response, http.StatusUnauthorized, map[string]string{"error": "Your refresh token has expired"})
 		return
 	}

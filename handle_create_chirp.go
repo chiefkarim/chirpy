@@ -27,7 +27,7 @@ type Chirp struct {
 func (config *apiConfig) createChirp(response http.ResponseWriter, request *http.Request) {
 	token, err := auth.GetBearerToken(request.Header)
 	if err != nil {
-		JSONResponse5OO(response)
+		respondWithJSON(response, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 		return
 	}
 	tokenUserId, err := auth.ValidateJWT(token, config.hashKey)

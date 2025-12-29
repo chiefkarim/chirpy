@@ -62,6 +62,8 @@ func GetBearerToken(header http.Header) (string, error) {
 	}
 	authHeader := strings.Split(res, " ")
 	if len(authHeader) != 2 {
+		log.Printf("authorization %v, header,%v", authHeader, res)
+
 		return "", errors.New("wrong formated authorization header")
 	}
 
@@ -69,10 +71,10 @@ func GetBearerToken(header http.Header) (string, error) {
 }
 
 func MakeRefreshToken() (string, error) {
-	var random []byte
-	_, err := rand.Read(random)
+	key := make([]byte, 32)
+	_, err := rand.Read(key)
 	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(random), nil
+	return hex.EncodeToString(key), nil
 }
