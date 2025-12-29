@@ -5,12 +5,27 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/chiefkarim/chirpy/internal/auth"
+	"github.com/google/uuid"
 )
 
+type params struct {
+	Email     string        `json:"email"`
+	Paswword  string        `json:"password"`
+	ExpiresIn time.Duration `json:"expires_in_seconds"`
+}
+type LoginUserDetails struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
+}
+
 func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
-	var user User
+	var user params
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("500:Error reading body for loginUser %v\n", err)
@@ -46,11 +61,15 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusUnauthorized, message)
 		return
 	}
-
-	respondWithJSON(w, http.StatusOK, UserDetails{
+	token, err := auth.MakeJWT(dbUser.ID, config.hashKey, user.ExpiresIn)
+	if err != nil {
+		JSONResponse5OO(w)
+	}
+	respondWithJSON(w, http.StatusOK, LoginUserDetails{
 		ID:        dbUser.ID,
 		CreatedAt: dbUser.CreatedAt.Time,
 		UpdatedAt: dbUser.UpdatedAt.Time,
 		Email:     dbUser.Email,
+		Token:     token,
 	})
 }

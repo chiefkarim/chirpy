@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"errors"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
 
@@ -17,7 +20,6 @@ func TestHashPassword(t *testing.T) {
 		t.Error("Hashed password should not be empty")
 	}
 
-	// Test if the hashed password can be verified
 	match, err := CheckPasswordHash(password, hashedPassword)
 	if err != nil {
 		t.Fatalf("CheckPasswordHash failed: %v", err)
@@ -26,7 +28,6 @@ func TestHashPassword(t *testing.T) {
 		t.Error("Password should match the hashed password")
 	}
 
-	// Test with a wrong password
 	wrongPassword := "wrongPassword"
 	match, err = CheckPasswordHash(wrongPassword, hashedPassword)
 	if err != nil {
@@ -42,7 +43,6 @@ func TestMakeAndValidateJWT(t *testing.T) {
 	tokenSecret := "supersecretjwtkey"
 	expiresIn := time.Minute * 5
 
-	// Test MakeJWT
 	jwtToken, err := MakeJWT(userID, tokenSecret, expiresIn)
 	if err != nil {
 		t.Fatalf("MakeJWT failed: %v", err)
@@ -51,7 +51,6 @@ func TestMakeAndValidateJWT(t *testing.T) {
 		t.Error("JWT token should not be empty")
 	}
 
-	// Test ValidateJWT with a valid token
 	validatedUserID, err := ValidateJWT(jwtToken, tokenSecret)
 	if err != nil {
 		t.Fatalf("ValidateJWT failed for valid token: %v", err)
@@ -60,23 +59,81 @@ func TestMakeAndValidateJWT(t *testing.T) {
 		t.Errorf("Validated UserID (%s) does not match original UserID (%s)", validatedUserID, userID)
 	}
 
-	// Test ValidateJWT with a wrong secret
 	wrongSecret := "wrongsecret"
 	_, err = ValidateJWT(jwtToken, wrongSecret)
 	if err == nil {
 		t.Error("ValidateJWT should fail with wrong secret")
 	}
 
-	// Test ValidateJWT with an expired token (by making a token with a very short expiry)
 	expiredExpiresIn := time.Millisecond * 1
 	expiredJwtToken, err := MakeJWT(userID, tokenSecret, expiredExpiresIn)
 	if err != nil {
 		t.Fatalf("MakeJWT for expired token failed: %v", err)
 	}
-	time.Sleep(expiredExpiresIn * 2) // Wait for the token to expire
+	time.Sleep(expiredExpiresIn * 2)
 
 	_, err = ValidateJWT(expiredJwtToken, tokenSecret)
 	if err == nil {
 		t.Error("ValidateJWT should fail for an expired token")
+	}
+}
+
+type TestCase struct {
+	input  http.Header
+	output string
+	Error  error
+}
+
+func TestGetBearerToken(t *testing.T) {
+	cases := map[string]TestCase{
+		"clean beearer token": {
+			input: func() http.Header {
+				h := http.Header{}
+				h.Add("Authorization", "Bearer asdfasdfasdfd")
+				return h
+			}(),
+			output: "asdfasdfasdfd",
+			Error:  nil,
+		},
+		"no authorization header": {
+			input: func() http.Header {
+				h := http.Header{}
+				return h
+			}(),
+			output: "",
+			Error:  errors.New("authorization header not present"),
+		},
+		"authorization header wrong format": {
+			input: func() http.Header {
+				h := http.Header{}
+				h.Add("Authorization", "asdfasdfasdf")
+				return h
+			}(),
+			Error:  errors.New("wrong formated authorization header"),
+			output: "",
+		},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			wantValue := test.output
+			wantError := test.Error
+
+			haveValue, haveError := GetBearerToken(test.input)
+			switch {
+			case wantError == nil && haveError != nil:
+				t.Error(cmp.Diff(wantError, haveError.Error()))
+			case wantError != nil && haveError == nil:
+				t.Error(cmp.Diff(wantError.Error(), haveError))
+			case wantError != nil && haveError != nil:
+				cmp.Diff(wantError.Error(), haveError.Error())
+			}
+
+			valueDiff := cmp.Diff(haveValue, wantValue)
+
+			if valueDiff != "" {
+				t.Error(valueDiff)
+			}
+		})
 	}
 }
