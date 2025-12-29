@@ -62,8 +62,6 @@ func GetBearerToken(header http.Header) (string, error) {
 	}
 	authHeader := strings.Split(res, " ")
 	if len(authHeader) != 2 {
-		log.Printf("authorization %v, header,%v", authHeader, res)
-
 		return "", errors.New("wrong formated authorization header")
 	}
 
