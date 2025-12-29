@@ -51,6 +51,7 @@ func main() {
 	serverMux.Handle("/app/", fileSystemHandler)
 
 	serverMux.HandleFunc("POST /api/users", config.createUser)
+	serverMux.HandleFunc("PUT /api/users", config.ChangeUserDetails)
 	serverMux.HandleFunc("POST /api/login", config.loginUser)
 	serverMux.HandleFunc("POST /api/refresh", config.RefreshToken)
 	serverMux.HandleFunc("POST /api/revoke", config.RevokeRefreshToken)

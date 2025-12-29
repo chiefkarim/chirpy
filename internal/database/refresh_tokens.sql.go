@@ -41,7 +41,9 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 
 const expireToken = `-- name: ExpireToken :one
 UPDATE refresh_tokens
-SET revoked_at =$1
+SET
+    revoked_at = $1,
+    updated_at = now()
 WHERE token = $2
 RETURNING token, created_at, updated_at, user_id, expires_at, revoked_at
 `
