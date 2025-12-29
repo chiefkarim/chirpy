@@ -8,20 +8,21 @@ import (
 	"time"
 
 	"github.com/chiefkarim/chirpy/internal/auth"
+	"github.com/chiefkarim/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
 type params struct {
-	Email     string        `json:"email"`
-	Paswword  string        `json:"password"`
-	ExpiresIn time.Duration `json:"expires_in_seconds"`
+	Email    string `json:"email"`
+	Paswword string `json:"password"`
 }
 type LoginUserDetails struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
@@ -62,15 +63,28 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.MakeJWT(dbUser.ID, config.hashKey, user.ExpiresIn)
+	token, err := auth.MakeJWT(dbUser.ID, config.hashKey, 1*time.Hour)
+	if err != nil {
+		JSONResponse5OO(w)
+	}
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		JSONResponse5OO(w)
+	}
+	_, err = config.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		ExpiresAt: time.Now().UTC().Add(60 * 24 * time.Hour),
+		UserID:    dbUser.ID,
+	})
 	if err != nil {
 		JSONResponse5OO(w)
 	}
 	respondWithJSON(w, http.StatusOK, LoginUserDetails{
-		ID:        dbUser.ID,
-		CreatedAt: dbUser.CreatedAt.Time,
-		UpdatedAt: dbUser.UpdatedAt.Time,
-		Email:     dbUser.Email,
-		Token:     token,
+		ID:           dbUser.ID,
+		CreatedAt:    dbUser.CreatedAt.Time,
+		UpdatedAt:    dbUser.UpdatedAt.Time,
+		Email:        dbUser.Email,
+		Token:        token,
+		RefreshToken: refreshToken,
 	})
 }
