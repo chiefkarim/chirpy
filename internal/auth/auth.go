@@ -1,6 +1,14 @@
 package auth
 
-import "github.com/alexedwards/argon2id"
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/alexedwards/argon2id"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+)
 
 func HashPassword(password string) (string, error) {
 	hash, err := argon2id.CreateHash(password, argon2id.DefaultParams)
@@ -10,4 +18,36 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) (bool, error) {
 	isTrue, err := argon2id.ComparePasswordAndHash(password, hash)
 	return isTrue, err
+}
+
+func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
+		Subject:   userID.String(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString([]byte(tokenSecret))
+	return ss, err
+}
+
+func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
+		return []byte(tokenSecret), nil
+	})
+	if err != nil {
+		log.Printf("error parsing jwt token %v", err)
+	} else if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
+		issuer := claims.Issuer
+		fmt.Printf("issuer %s, expiresat %s, issuedat %s, subject %s", issuer, claims.ExpiresAt, claims.IssuedAt, claims.Subject)
+		if userid, ok := uuid.Parse(claims.Subject); ok == nil {
+			return userid, nil
+		} else {
+			log.Print("Unkonw claims type")
+			err = fmt.Errorf("Unkown claims type jwt.RegisteredClaims")
+		}
+	}
+
+	return uuid.UUID{}, err
 }
