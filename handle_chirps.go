@@ -1,23 +1,55 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
+	"database/sql"
+	"errors"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 func (config *apiConfig) getAllChirps(response http.ResponseWriter, request *http.Request) {
-	rows, err := config.dbQueries.GetAllChirps(request.Context())
-	if err != nil {
-		message, err := json.Marshal(map[string]string{"error": "error getting all chirps."})
+	urlParams := request.URL.Query()
+	authorId := urlParams.Get("author_id")
+
+	if authorId != "" {
+		parsedAuthorId, err := uuid.Parse(authorId)
 		if err != nil {
-			log.Printf("Error Marshaling response error message %v", err)
-			response.WriteHeader(http.StatusInternalServerError)
+			respondWithJSON(response, http.StatusUnauthorized, map[string]string{"error": "Please provide valid user id query"})
 			return
 		}
-		log.Printf("Error getting all chirps from db. %v", err)
-		response.WriteHeader(http.StatusInternalServerError)
-		response.Write(message)
+		rows, err := config.dbQueries.GetChirpsByUserId(request.Context(), parsedAuthorId)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				respondWithJSON(response, http.StatusNotFound, map[string]string{"error": "No chirps found for the given author id"})
+				return
+			}
+			respondWithJSON(response, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+			return
+		}
+
+		chirps := make([]Chirp, 0, len(rows))
+		for _, row := range rows {
+			chirps = append(chirps, Chirp{
+				Id:        row.ID,
+				CreatedAt: row.CreatedAt.Time,
+				UpdatedAt: row.UpdatedAt.Time,
+				UserId:    row.UserID,
+				Body:      row.Body,
+			})
+		}
+		respondWithJSON(response, http.StatusOK, chirps)
+		return
+	}
+
+	rows, err := config.dbQueries.GetAllChirps(request.Context())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithJSON(response, http.StatusNotFound, map[string]string{"error": "No chirps found for the given author id"})
+			return
+		}
+		respondWithJSON(response, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
 	}
 	chirps := make([]Chirp, 0, len(rows))
 	for _, row := range rows {
@@ -29,12 +61,5 @@ func (config *apiConfig) getAllChirps(response http.ResponseWriter, request *htt
 			Body:      row.Body,
 		})
 	}
-	parsedChirps, err := json.Marshal(chirps)
-	if err != nil {
-		log.Printf("Error Marshaling response error message %v", err)
-		response.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	response.WriteHeader(http.StatusOK)
-	response.Write(parsedChirps)
+	respondWithJSON(response, http.StatusOK, chirps)
 }
