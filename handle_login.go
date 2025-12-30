@@ -23,6 +23,7 @@ type LoginUserDetails struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
@@ -90,5 +91,6 @@ func (config *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		Email:        dbUser.Email,
 		Token:        token,
 		RefreshToken: refreshToken,
+		IsChirpyRed:  dbUser.IsChirpyRed,
 	})
 }

@@ -67,7 +67,7 @@ func (config *apiConfig) DeleteChirp(response http.ResponseWriter, request *http
 		respondWithJSON(response, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 		return
 	}
-	// check that the url chirp id belongs to the user making the request
+
 	chirp, err := config.dbQueries.GetChirp(request.Context(), parsedChirpId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

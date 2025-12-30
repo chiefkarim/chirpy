@@ -46,8 +46,8 @@ func main() {
 	serverMux := http.NewServeMux()
 	server := &http.Server{Addr: ":8080", Handler: serverMux}
 	fmt.Printf("server listening on: http://localhost:%s/app/\n", strings.ReplaceAll(server.Addr, ":", ""))
-
 	fileSystemHandler := config.middlewareMetricInc(http.StripPrefix("/app/", http.FileServer(http.Dir("./http"))))
+
 	serverMux.Handle("/app/", fileSystemHandler)
 
 	serverMux.HandleFunc("POST /api/users", config.createUser)
@@ -60,6 +60,7 @@ func main() {
 	serverMux.HandleFunc("GET /api/chirps", config.getAllChirps)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}", config.getChirp)
 	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}", config.DeleteChirp)
+	serverMux.HandleFunc("POST /api/polka/webhooks", config.UpgradeUser)
 
 	serverMux.HandleFunc("GET /admin/metrics", config.metric)
 	serverMux.HandleFunc("POST /admin/reset", config.reset)

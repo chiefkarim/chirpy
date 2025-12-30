@@ -56,9 +56,10 @@ func (config *apiConfig) ChangeUserDetails(response http.ResponseWriter, request
 	}
 
 	respondWithJSON(response, http.StatusOK, UserDetails{
-		ID:        newUser.ID,
-		Email:     newUser.Email,
-		CreatedAt: newUser.CreatedAt.Time,
-		UpdatedAt: newUser.UpdatedAt.Time,
+		ID:          newUser.ID,
+		Email:       newUser.Email,
+		CreatedAt:   newUser.CreatedAt.Time,
+		UpdatedAt:   newUser.UpdatedAt.Time,
+		IsChirpyRed: newUser.IsChirpyRed,
 	})
 }

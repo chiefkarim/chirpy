@@ -18,7 +18,7 @@ SET
     hashed_password = $2,
     updated_at = now()
 WHERE id = $3
-RETURNING id, email, created_at, updated_at, hashed_password
+RETURNING id, email, created_at, updated_at, hashed_password, is_chirpy_red
 `
 
 type ChangeUserDetailsParams struct {
@@ -36,6 +36,7 @@ func (q *Queries) ChangeUserDetails(ctx context.Context, arg ChangeUserDetailsPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -43,7 +44,7 @@ func (q *Queries) ChangeUserDetails(ctx context.Context, arg ChangeUserDetailsPa
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, created_at, updated_at)
 VALUES (gen_random_uuid(), $1, $2, now(), now())
-RETURNING id, email, created_at, updated_at, hashed_password
+RETURNING id, email, created_at, updated_at, hashed_password, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -60,6 +61,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -70,7 +72,8 @@ SELECT
     email,
     created_at,
     updated_at,
-    hashed_password
+    hashed_password,
+    is_chirpy_red
 FROM users
 WHERE email = $1
 `
@@ -84,6 +87,29 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
+	)
+	return i, err
+}
+
+const upgradeUser = `-- name: UpgradeUser :one
+UPDATE users
+SET
+    is_chirpy_red = true
+WHERE id = $1
+RETURNING id, email, created_at, updated_at, hashed_password, is_chirpy_red
+`
+
+func (q *Queries) UpgradeUser(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, upgradeUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
