@@ -55,17 +55,25 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	return uuid.UUID{}, err
 }
 
-func GetBearerToken(header http.Header) (string, error) {
+func GetAPIKey(header http.Header) (string, error) {
+	return GetHeaderToken(header, "ApiKey")
+}
+
+func GetHeaderToken(header http.Header, name string) (string, error) {
 	res := header.Get("Authorization")
 	if res == "" {
 		return "", errors.New("authorization header not present")
 	}
 	authHeader := strings.Split(res, " ")
-	if len(authHeader) != 2 {
+	if len(authHeader) != 2 || authHeader[0] != name {
 		return "", errors.New("wrong formated authorization header")
 	}
 
 	return authHeader[1], nil
+}
+
+func GetBearerToken(header http.Header) (string, error) {
+	return GetHeaderToken(header, "Bearer")
 }
 
 func MakeRefreshToken() (string, error) {

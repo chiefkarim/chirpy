@@ -18,6 +18,7 @@ type apiConfig struct {
 	fileServerHits atomic.Int32
 	dbQueries      *database.Queries
 	hashKey        string
+	plokaApiKey    string
 }
 
 func (config *apiConfig) middlewareMetricInc(next http.Handler) http.Handler {
@@ -41,7 +42,8 @@ func main() {
 	dbQueries := database.New(db)
 
 	hash_key := os.Getenv("HASH_KEY")
-	config := apiConfig{dbQueries: dbQueries, hashKey: hash_key}
+	ploka_key := os.Getenv("PLOKA_API_KEY")
+	config := apiConfig{dbQueries: dbQueries, hashKey: hash_key, plokaApiKey: ploka_key}
 
 	serverMux := http.NewServeMux()
 	server := &http.Server{Addr: ":8080", Handler: serverMux}
