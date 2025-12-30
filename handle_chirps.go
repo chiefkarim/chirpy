@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"sort"
 
 	"github.com/google/uuid"
 )
@@ -11,6 +12,7 @@ import (
 func (config *apiConfig) getAllChirps(response http.ResponseWriter, request *http.Request) {
 	urlParams := request.URL.Query()
 	authorId := urlParams.Get("author_id")
+	sortBy := urlParams.Get("sort")
 
 	if authorId != "" {
 		parsedAuthorId, err := uuid.Parse(authorId)
@@ -38,6 +40,11 @@ func (config *apiConfig) getAllChirps(response http.ResponseWriter, request *htt
 				Body:      row.Body,
 			})
 		}
+		if sortBy == "desc" {
+			sort.Slice(chirps, func(i int, j int) bool {
+				return !chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+			})
+		}
 		respondWithJSON(response, http.StatusOK, chirps)
 		return
 	}
@@ -59,6 +66,11 @@ func (config *apiConfig) getAllChirps(response http.ResponseWriter, request *htt
 			UpdatedAt: row.UpdatedAt.Time,
 			UserId:    row.UserID,
 			Body:      row.Body,
+		})
+	}
+	if sortBy == "desc" {
+		sort.Slice(chirps, func(i int, j int) bool {
+			return !chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
 		})
 	}
 	respondWithJSON(response, http.StatusOK, chirps)
